@@ -26,5 +26,18 @@ async def on_ready():
     print("Currently active on " + str(len(client.guilds)) + " server(s).\n")
 
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="DMs for Help"))
+    
+    db = connect("./data/db/database.db", check_same_thread=False)
+    cur = db.cursor()
 
+    cur.execute('''
+                CREATE TABLE IF NOT EXISTS tags (
+                Tag text,
+                Ref text
+                );''')
+
+    db.commit()
+    cur.close()
+    db.close()
+    
 client.run(config.token)
