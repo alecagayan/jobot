@@ -1,27 +1,42 @@
 import discord
 from discord.ext import commands
 import sqlite3
+import spacy
+nlp = spacy.load('en_core_web_lg')
 
 class Tags(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
-    #command that takes in a tag and searches for the tag in the Tag column of the sqlite3 database
-    #once the tag is found, the text in the corresponding Ref column is sent to the channel
+
     @commands.command()
     async def tag(self, ctx, *, tag):
+
         conn = sqlite3.connect('./data/db/database.db')
         c = conn.cursor()
-        c.execute("SELECT * FROM tags WHERE Tag = ?", (tag,))
-        result = c.fetchone()
-        if result is None:
-            await ctx.send('Tag not found')
-        else:
-            await ctx.send(result[1])
+        c.execute("SELECT * FROM tags")
+        results = c.fetchall()
+        max_similarity = 0
+        max_tag = ""
+        for result in results:
+            similarity = nlp(tag).similarity(nlp(result[0]))
+            if similarity > max_similarity:
+                max_similarity = similarity
+                max_tag = result
+
+        await ctx.send(max_tag[0].title() + ":")
+        await ctx.send(max_tag[1])
         conn.close()
 
-    #command that takes in a tag and a text and adds the tag to the Tag column of the sqlite3 database
-    #the text is added to the Ref column of the sqlite3 database
+    @commands.command(alias=['tags'])
+    async def printall(self, ctx):
+        conn = sqlite3.connect('./data/db/database.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM tags")
+        result = c.fetchall()
+        for row in result:
+            await ctx.send(row[0] + " : " + row[1])
+        conn.close()
+
     @commands.command()
     async def addtag(self, ctx, *, tag):
         conn = sqlite3.connect('./data/db/database.db')
@@ -41,6 +56,39 @@ class Tags(commands.Cog):
         else:
             await ctx.send('Tag already exists')
         conn.close()
+
+    @commands.command()
+    async def removetag(self, ctx, *, tag):
+        conn = sqlite3.connect('./data/db/database.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM tags WHERE Tag = ?", (tag,))
+        result = c.fetchone()
+        if result is None:
+            await ctx.send('Tag does not exist')
+        else:
+            c.execute("DELETE FROM tags WHERE Tag = ?", (tag,))
+            conn.commit()
+            await ctx.send('Tag removed')
+        conn.close()
+
+    @commands.command()
+    async def edit(self, ctx, *, tag):
+        conn = sqlite3.connect('./data/db/database.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM tags WHERE Tag = ?", (tag,))
+        result = c.fetchone()
+        if result is None:
+            await ctx.send('Tag does not exist')
+        else:
+            await ctx.send('What would you like the content to be?')
+            def check(m):
+                return m.author == ctx.author
+            msg = await self.bot.wait_for('message', check=check)
+            c.execute("UPDATE tags SET Ref = ? WHERE Tag = ?", (msg.content, tag))
+            conn.commit()
+            await ctx.send('Tag updated')
+        conn.close()
+
 
 
 
