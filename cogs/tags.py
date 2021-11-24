@@ -23,9 +23,10 @@ class Tags(commands.Cog):
                 max_similarity = similarity
                 max_tag = result
 
-        await ctx.send(max_tag[0].title() + ":")
-        await ctx.send(max_tag[1])
-        conn.close()
+        #send embed with title being max_tag[0] and description being max_tag[1], and a related image from the internet
+        embed = discord.Embed(title=max_tag[0].title(), description=max_tag[1], color=0x57F287)
+        await ctx.send(embed=embed)
+    
 
     @commands.command(alias=['tags'])
     async def printall(self, ctx):
@@ -55,7 +56,7 @@ class Tags(commands.Cog):
             await ctx.send('Tag added')
         else:
             await ctx.send('Tag already exists')
-        conn.close()
+        conn.close()    
 
     @commands.command()
     async def removetag(self, ctx, *, tag):
@@ -88,11 +89,6 @@ class Tags(commands.Cog):
             conn.commit()
             await ctx.send('Tag updated')
         conn.close()
-
-
-
-
-
 
 def setup(bot):
     bot.add_cog(Tags(bot))
